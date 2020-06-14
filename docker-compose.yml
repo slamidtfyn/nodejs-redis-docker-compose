@@ -1,0 +1,50 @@
+version: '3'
+
+services:
+    app-client:
+        container_name: app-client
+        build: 
+            context: ./app-client
+            dockerfile: ../Dockerfile
+        depends_on: 
+        - app-server
+        ports:
+        - "3000:3000"
+        networks:
+        - redis-net
+    
+    app-server:
+        container_name: app-server
+        build: 
+            context: ./app-server
+            dockerfile: ../Dockerfile
+        depends_on: 
+        - rediscache
+        networks:
+        - redis-net
+    
+    rediscache:
+        container_name: rediscache
+        image: redis
+        ports:
+        - "6379:6379"
+        volumes:
+        - redis-data:/data
+        restart: always
+        entrypoint: redis-server --appendonly yes
+        networks:
+        - redis-net
+
+    test:
+        image: pstauffer/curl:latest
+        entrypoint: curl -o /dev/null -s -w "%{http_code}\n" http://app-client:3000?req=[1-10000]
+        networks:
+            - redis-net
+        depends_on: 
+            - app-client
+                    
+networks:
+    redis-net:
+    
+volumes:
+    redis-data:
